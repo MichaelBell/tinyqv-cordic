@@ -10,6 +10,7 @@ module cordic #(
     input  logic                  rst,
     input  logic                  start,
     input  logic signed [Q+F-1:0] theta,
+    input  logic		  cos,
     output logic signed [Q+F-1:0] cos_o,
     output logic                  done
 );
@@ -41,6 +42,8 @@ fixed_t theta_red;
 logic   flip;
 logic   work;
 
+reg cos_state;
+
 cordic_chain #(
     .Q(Q),
     .F(F),
@@ -68,13 +71,12 @@ atan atan_inst(
 always_comb begin
     theta_red = theta;
     flip      = 0;
-
     if(theta > PI_2) begin
         theta_red = PI - theta;
-        flip      = 1;
+        flip      = cos_state ? 1 : 0;
     end else if (theta < -PI_2) begin
         theta_red = -PI - theta;
-        flip      = 1;
+        flip      = cos_state ? 1 : 0;
     end
 end
 
@@ -110,7 +112,7 @@ assign stage = (N*count);
                 if(count == STAGES-1) begin
                     state <= DONE;
                     done <= 1;
-                    cos_o <= flip ? -x_out : x_out;
+                    cos_o <= flip ? (cos_state ? -x_out : -y_out) : (cos_state ? x_out : y_out);
                 end else begin
                     count <= count + 1;
                 end
@@ -121,6 +123,13 @@ assign stage = (N*count);
             end
         endcase
     end
+  end
+  
+  //cos state register
+  always @(posedge clk) begin
+     if (rst) cos_state <= 1'b0;
+     else if (state == IDLE) cos_state <= cos;
+     else cos_state <= cos_state;
   end
 
 endmodule

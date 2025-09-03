@@ -5,6 +5,7 @@ module cordic_instr_top(
 	input  logic        clk_en,
 	input  logic        reset,
 	input  logic        start,
+	input  logic	    cos,
 	output logic        done,
 	output logic [31:0] result
 );	
@@ -38,6 +39,7 @@ module cordic_instr_top(
 		.rst(reset),
 		.start(start),
 		.theta(fp_in),
+		.cos(cos),
 		.cos_o(fp_out),
 		.done(cordic_done)
 	);
