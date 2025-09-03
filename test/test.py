@@ -6,6 +6,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
 from tqv import TinyQV
+from testbench import scoreboard
 
 # When submitting your design, change this to the peripheral number
 # in peripherals.v.  e.g. if your design is i_user_peri05, set this to 5.
@@ -75,3 +76,39 @@ async def test_project(dut):
     # Write bottom bit of address 8 high to clear
     await tqv.write_byte_reg(8, 1)
     assert not await tqv.is_interrupt_asserted()
+
+@cocotb.test
+async def test_with_scoreboard(dut):
+    """
+    Test the design with scoreboard
+    """
+    sb = scoreboard.Scoreboard(
+        name="regbus_sb",
+        timeout=1000,            # optional
+        time_units="us",
+        # comparator=lambda dut_txn, model_txn: dut_txn == model_txn,  # default anyway
+    )
+    sb.start()
+
+    # Example transaction shape (anything hashable/serializable is fine)
+    # e.g., tuples: (addr, kind, width, data)
+    # Feed expected transactions from your golden model:
+    await sb.model_q.put( (0x00, "W", 32, 0x82345678) )
+    await sb.model_q.put( (0x00, "R",  8, 0x78) )
+    await sb.model_q.put( (0x00, "R", 16, 0x5678) )
+    await sb.model_q.put( (0x00, "R", 32, 0x82345678) )
+
+    # Meanwhile, your DUT monitor pushes observed transactions:
+    # (You would implement a coroutine that watches your bus or TinyQV wrapper
+    #  and pushes into sb.dut_q as things happen.)
+    await sb.dut_q.put( (0x00, "W", 32, 0x82345678) )
+    await sb.dut_q.put( (0x00, "R",  8, 0x78) )
+    await sb.dut_q.put( (0x00, "R", 16, 0x5678) )
+    await sb.dut_q.put( (0x00, "R", 32, 0x82345678) )
+
+    # Signal completion (both sides)
+    await sb.model_done()
+    await sb.dut_done()
+
+    # Wait for scoreboard to finish (asserts if mismatch/length mismatch)
+    await sb.wait()

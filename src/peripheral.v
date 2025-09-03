@@ -45,6 +45,17 @@ module tqvp_example (
         end
     end
 
+    wire [4:0]  q_out;
+    wire [63:0] f_out;
+    wire        out_valid;
+    payne_hanek_reducer phr(.clk(clk),
+                            .rst_n(rst_n),
+                            .data_in(data_in),
+                            .in_valid(1'b1),
+                            .out_valid(out_valid),
+                            .q_out(q_out),
+                            .f_out(f_out));
+
     // The bottom 8 bits of the stored data are added to ui_in and output to uo_out.
     assign uo_out = example_data[7:0] + ui_in;
 
