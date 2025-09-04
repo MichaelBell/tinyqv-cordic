@@ -17,14 +17,13 @@ project:
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
-    - "payne_hanek_reducer.v"
-    - "atan.sv"
-    - "cordic.sv"
-    - "cordic_chain.sv"
-    - "cordic_instr_top.sv"
-    - "cordic_stage.sv"
-    - "fixed_to_fp.sv"
-    - "fp_to_fixed.sv"
+    - "atan.v"
+    - "cordic.v"
+    - "cordic_chain.v"
+    - "cordic_instr_top.v"
+    - "cordic_stage.v"
+    - "fixed_to_fp.v"
+    - "fp_to_fixed.v"
     - "peripheral.v"
     - "tt_wrapper.v"
     - "test_harness/falling_edge_detector.sv"
@@ -38,7 +37,7 @@ project:
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: "1: cos, 0:sin"
+  ui[0]: ""
   ui[1]: ""
   ui[2]: ""
   ui[3]: ""
