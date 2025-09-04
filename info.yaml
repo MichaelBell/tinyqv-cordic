@@ -4,7 +4,7 @@ project:
   author:       "Dylan Toussaint"      # Your name
   discord:      "fabricelamalice"      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
   description:  "CORDIC Accelerator for TinyQV"      # One line description of what your project does
-  language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
+  language:     "SystemVerilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     64000000  # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
@@ -18,6 +18,13 @@ project:
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - "payne_hanek_reducer.v"
+    - "atan.sv"
+    - "cordic.sv"
+    - "cordic_chain.sv"
+    - "cordic_instr_top.sv"
+    - "cordic_stage.sv"
+    - "fixed_to_fp.sv"
+    - "fp_to_fixed.sv"
     - "peripheral.v"
     - "tt_wrapper.v"
     - "test_harness/falling_edge_detector.sv"
@@ -31,7 +38,7 @@ project:
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
+  ui[0]: "1: cos, 0:sin"
   ui[1]: ""
   ui[2]: ""
   ui[3]: ""
