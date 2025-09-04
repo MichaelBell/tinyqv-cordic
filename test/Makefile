@@ -5,7 +5,7 @@
 SIM ?= icarus
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = peripheral.v payne_hanek_reducer.v
+PROJECT_SOURCES = payne_hanek_reducer.v atan.sv cordic.sv cordic_chain.sv cordic_instr_top.sv cordic_stage.sv fixed_to_fp.sv fp_to_fixed.sv peripheral.v
 ADDITIONAL_SOURCES = tt_wrapper.v test_harness/*.sv
 
 ifneq ($(GATES),yes)
