@@ -37,7 +37,7 @@ module cordicDylanJustin (
     assign start = (data_write_n != 2'b11) && (address == 6'h0);
     assign data_ready = done;
 
-    cordic_instr_top(
+    cordic_instr_top cit(
         .dataa(data_in),
         .datab(32'b0),
         .clk(clk),
@@ -92,3 +92,4 @@ module cordicDylanJustin (
     wire _unused = &{data_read_n, 1'b0};
 
 endmodule
+
