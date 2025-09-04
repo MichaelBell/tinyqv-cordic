@@ -32,50 +32,50 @@ async def test_project(dut):
     await tqv.reset()
 
     dut._log.info("Test project behavior")
-
-    # Test register write and read back
-    await tqv.write_word_reg(0, 0x82345678)
-    assert await tqv.read_byte_reg(0) == 0x78
-    assert await tqv.read_hword_reg(0) == 0x5678
-    assert await tqv.read_word_reg(0) == 0x82345678
-
-    # Set an input value, in the example this will be added to the register value
-    dut.ui_in.value = 30
+    
+    # Set an input value
+    dut.ui_in.value = 1
 
     # Wait for two clock cycles to see the output values, because ui_in is synchronized over two clocks,
     # and a further clock is required for the output to propagate.
     await ClockCycles(dut.clk, 3)
 
+    # Test register write and read back
+    await tqv.write_word_reg(0, 0x3F000000)
+    await ClockCycles(dut.clk, 12)
+    assert await tqv.read_byte_reg(0) == 0x3C
+    assert await tqv.read_hword_reg(0) == 0xA93C
+    assert await tqv.read_word_reg(0) == 0x3F60A93C
+
     # The following assersion is just an example of how to check the output values.
     # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 0x96
-
-    # Input value should be read back from register 1
-    assert await tqv.read_byte_reg(4) == 30
-
-    # Zero should be read back from register 2
-    assert await tqv.read_word_reg(8) == 0
+    #assert dut.uo_out.value == 0x96
 
     # A second write should work
-    await tqv.write_word_reg(0, 40)
-    assert dut.uo_out.value == 70
+    dut.ui_in.value = 0
+    await ClockCycles(dut.clk, 3)
+    await tqv.write_word_reg(0, 0x3F000000)
+    await ClockCycles(dut.clk, 12)
+    assert await tqv.read_byte_reg(3) == 0x3E
+    assert await tqv.read_hword_reg(1) == 0x3EF5
+    assert await tqv.read_word_reg(0) == 0x3EF57760
 
     # Test the interrupt, generated when ui_in[6] goes high
-    dut.ui_in[6].value = 1
-    await ClockCycles(dut.clk, 1)
-    dut.ui_in[6].value = 0
+    #dut.ui_in[6].value = 1
+    #await ClockCycles(dut.clk, 1)
+    #dut.ui_in[6].value = 0
 
     # Interrupt asserted
-    await ClockCycles(dut.clk, 3)
-    assert await tqv.is_interrupt_asserted()
+    #await ClockCycles(dut.clk, 3)
+    #assert await tqv.is_interrupt_asserted()
 
     # Interrupt doesn't clear
-    await ClockCycles(dut.clk, 10)
-    assert await tqv.is_interrupt_asserted()
+    #await ClockCycles(dut.clk, 10)
+    #assert await tqv.is_interrupt_asserted()
     
     # Write bottom bit of address 8 high to clear
-    await tqv.write_byte_reg(8, 1)
-    assert not await tqv.is_interrupt_asserted()
+    #await tqv.write_byte_reg(8, 1)
+    #assert not await tqv.is_interrupt_asserted()
 
 @cocotb.test
 async def test_with_scoreboard(dut):
@@ -93,18 +93,20 @@ async def test_with_scoreboard(dut):
     # Example transaction shape (anything hashable/serializable is fine)
     # e.g., tuples: (addr, kind, width, data)
     # Feed expected transactions from your golden model:
-    await sb.model_q.put( (0x00, "W", 32, 0x82345678) )
-    await sb.model_q.put( (0x00, "R",  8, 0x78) )
-    await sb.model_q.put( (0x00, "R", 16, 0x5678) )
-    await sb.model_q.put( (0x00, "R", 32, 0x82345678) )
+    await sb.model_q.put( (0x00, "W", 32, 0x3F000000) )
+    await ClockCycles(dut.clk, 12)
+    await sb.model_q.put( (0x00, "R",  8, 0x3C) )
+    await sb.model_q.put( (0x00, "R", 16, 0xA93C) )
+    await sb.model_q.put( (0x00, "R", 32, 0x3F60A93C) )
 
     # Meanwhile, your DUT monitor pushes observed transactions:
     # (You would implement a coroutine that watches your bus or TinyQV wrapper
     #  and pushes into sb.dut_q as things happen.)
-    await sb.dut_q.put( (0x00, "W", 32, 0x82345678) )
-    await sb.dut_q.put( (0x00, "R",  8, 0x78) )
-    await sb.dut_q.put( (0x00, "R", 16, 0x5678) )
-    await sb.dut_q.put( (0x00, "R", 32, 0x82345678) )
+    await sb.dut_q.put( (0x00, "W", 32, 0x3F000000) )
+    await ClockCycles(dut.clk, 12)
+    await sb.dut_q.put( (0x00, "R",  8, 0x3C) )
+    await sb.dut_q.put( (0x00, "R", 16, 0xA93C) )
+    await sb.dut_q.put( (0x00, "R", 32, 0x3F60A93C) )
 
     # Signal completion (both sides)
     await sb.model_done()
