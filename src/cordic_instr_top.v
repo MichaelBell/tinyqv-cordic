@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- `default_nettype none
+`default_nettype none
 
- /*
+/*
  Module cordic_instr_top
  Puts it all together. FP -> FIXED -> Cordic Rotations -> FIXED -> FP
  */
@@ -21,12 +21,12 @@ module cordic_instr_top(
 	output reg  [31:0] result
 );	
 	
-	wire [26:0] fp_in;
-	wire [26:0] fp_out;
+	wire [17:0] fp_in;
+	wire [17:0] fp_out;
 	wire [31:0] temp_out;
 	
-	wire [26:0] cordic_in;
-	wire [26:0] cordic_out;
+	wire [17:0] cordic_in;
+	wire [17:0] cordic_out;
 	wire        cordic_done;
 	reg         delay;
 

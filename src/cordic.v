@@ -8,15 +8,15 @@ module cordic (
     input  wire                  clk_en,
     input  wire                  rst,
     input  wire                  start,
-    input  wire signed [26:0]    theta,
+    input  wire signed [17:0]    theta,
     input  wire                  cos,
-    output reg  signed [26:0]    cos_o,
+    output reg  signed [17:0]    cos_o,
     output reg                   done
 );
 
-    localparam integer Q            = 4;
-    localparam integer F            = 23;
-    localparam integer STAGES       = 10;
+    localparam integer Q            = 2;
+    localparam integer F            = 16;
+    localparam integer STAGES       = 8;
     localparam integer N            = 2;
 
     localparam integer TOTAL_STAGES = N * STAGES;
@@ -24,17 +24,17 @@ module cordic (
     localparam [1:0] IDLE = 2'd0, BUSY = 2'd1, DONE = 2'd2;
     reg [1:0] state;
 
-    localparam signed [26:0] CORDIC_K = 27'h004dba77;
-    localparam signed [26:0] PI       = 27'h1921FB5;
-    localparam signed [26:0] PI_2     = PI >>> 1;
+    localparam signed [17:0] CORDIC_K = 18'h09B75; //TODO: unsure
+    localparam signed [17:0] PI       = 18'h3243F; //TODO: unsure
+    localparam signed [17:0] PI_2     = PI >>> 1;
 
-    reg  signed [26:0] x_in, y_in, z_in;
-    wire signed [26:0] x_out, y_out, z_out;
-    wire signed [26:0] atan [0:1];
-    reg  [3:0]         count;   // $clog2(STAGES+1)=4
-    wire [4:0]         stage;   // $clog2(TOTAL_STAGES)=5
+    reg  signed [17:0] x_in, y_in, z_in;
+    wire signed [17:0] x_out, y_out, z_out;
+    wire signed [17:0] atan [0:1];
+    reg  [3:0]         count;
+    wire [3:0]         stage; 
 
-    reg  signed [26:0] theta_red;
+    reg  signed [17:0] theta_red;
     reg                flip;
     wire               work;
 
@@ -79,9 +79,9 @@ module cordic (
     always @(posedge clk) begin
         if (rst) begin
             //Reset signal, set state to IDLE and signals to 0
-            x_in  <= 27'sd0;
-            y_in  <= 27'sd0;
-            z_in  <= 27'sd0;
+            x_in  <= 18'sd0;
+            y_in  <= 18'sd0;
+            z_in  <= 18'sd0;
             count <= 4'd0;
             done  <= 1'b0;
             state <= IDLE;
@@ -91,7 +91,7 @@ module cordic (
                     done <= 1'b0;
                     if (start) begin
                         x_in  <= CORDIC_K;
-                        y_in  <= 27'sd0;
+                        y_in  <= 18'sd0;
                         z_in  <= theta_red;
                         count <= 4'd0;
                         state <= BUSY;

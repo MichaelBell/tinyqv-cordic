@@ -11,23 +11,23 @@
  */
 
 module cordic_stage (
-    input  wire signed [26:0] x_in,
-    input  wire signed [26:0] y_in,
-    input  wire signed [26:0] z_in,
-    input  wire signed [26:0] atan,
-    input  wire        [4:0]  stage,
-    output wire signed [26:0] x_out,
-    output wire signed [26:0] y_out,
-    output wire signed [26:0] z_out
+    input  wire signed [17:0] x_in,
+    input  wire signed [17:0] y_in,
+    input  wire signed [17:0] z_in,
+    input  wire signed [17:0] atan,
+    input  wire        [3:0]  stage,
+    output wire signed [17:0] x_out,
+    output wire signed [17:0] y_out,
+    output wire signed [17:0] z_out
 );
 		
-    wire signed [26:0] x_shift, y_shift;
+    wire signed [17:0] x_shift, y_shift;
     
     assign x_shift = x_in >>> stage;
     assign y_shift = y_in >>> stage;
 
-    assign x_out = z_in[26] ? (x_in + y_shift) : (x_in - y_shift);
-    assign y_out = z_in[26] ? (y_in - x_shift) : (y_in + x_shift);
-    assign z_out = z_in + (z_in[26] ? atan : -atan);
+    assign x_out = z_in[17] ? (x_in + y_shift) : (x_in - y_shift);
+    assign y_out = z_in[17] ? (y_in - x_shift) : (y_in + x_shift);
+    assign z_out = z_in + (z_in[17] ? atan : -atan);
 
 endmodule
