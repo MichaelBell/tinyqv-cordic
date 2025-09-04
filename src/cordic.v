@@ -16,7 +16,7 @@ module cordic (
 
     localparam integer Q            = 2;
     localparam integer F            = 16;
-    localparam integer STAGES       = 8;
+    localparam integer STAGES       = 6;
     localparam integer N            = 2;
 
     localparam integer TOTAL_STAGES = N * STAGES;

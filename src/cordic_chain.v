@@ -40,8 +40,6 @@ module cordic_chain (
             4'd6:  begin shift[0] = 4'd6;  shift[1] = 4'd7;  end
             4'd8:  begin shift[0] = 4'd8;  shift[1] = 4'd9;  end
             4'd10: begin shift[0] = 4'd10; shift[1] = 4'd11; end
-            4'd12: begin shift[0] = 4'd12; shift[1] = 4'd13; end
-            4'd14: begin shift[0] = 4'd14; shift[1] = 4'd15; end
             default: begin shift[0] = 4'd0; shift[1] = 4'd1; end
         endcase
     end
