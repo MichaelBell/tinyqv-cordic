@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Dylan Toussaint
+ * Copyright (c) 2025 Dylan Toussaint, Justin Fok
  * SPDX-License-Identifier: Apache-2.0
  */
 
