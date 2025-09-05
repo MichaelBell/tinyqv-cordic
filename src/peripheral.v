@@ -99,11 +99,14 @@ module cordicDylanJustin (
                       (address == ADDR_RESULT) ? result_reg :
                       (address == ADDR_STATUS) ? {31'b0, status_reg} : 
                       32'b0;
+    /*
     assign data_out = (data_read_n == 2'b00) ? {24'b0, data_out_imm[7:0]} :
     		      (data_read_n == 2'b01) ? {16'b0, data_out_imm[15:0]} :
     		      (data_read_n == 2'b00) ? data_out_imm : 
     		      32'b0;
-    assign data_ready = status_reg;
+    */
+    assign data_out = data_out_imm;
+    assign data_ready = (address == ADDR_RESULT) ? status_reg : 1'b1;
     
     // User interrupt is generated on rising edge of invalid floating point input, and cleared by writing a 1 to the low bit of address 8.
     
