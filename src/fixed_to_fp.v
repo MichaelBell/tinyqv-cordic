@@ -71,11 +71,11 @@ module fixed_to_fp(
 
       if (msb > 16) begin
          imm = abs_val >> (msb - 16);
-         norm = {imm[16:0], 6'b0};
+         norm = {imm[15:0], 7'b0};
       end
       else begin
          imm = abs_val << (16 - msb);
-         norm = {imm[16:0], 6'b0};
+         norm = {imm[15:0], 7'b0};
       end
 
       fp_out = { sign, exp[7:0], norm[22:0] };
