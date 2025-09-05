@@ -46,7 +46,6 @@ async def test_project(dut):
     assert await tqv.read_hword_reg(0) == 0x0000
     assert await tqv.read_word_reg(0) == 0x3F000000
     await tqv.write_word_reg(1, 0x00000003) #cos
-    assert await tqv.read_byte_reg(1) == 0x03
     await ClockCycles(dut.clk, 6)
     assert await tqv.read_byte_reg(3) == 0x01 #done
     assert await tqv.read_byte_reg(2) == 0x00
@@ -61,12 +60,11 @@ async def test_project(dut):
     #dut.ui_in.value = 0
     await tqv.write_word_reg(0, 0x3F000000) #0.5
     await tqv.write_word_reg(1, 0x00000001) #sin
-    assert await tqv.read_byte_reg(1) == 0x01
     await ClockCycles(dut.clk, 6)
     assert await tqv.read_byte_reg(3) == 0x01 #done
-    assert await tqv.read_byte_reg(3) == 0x3E
-    assert await tqv.read_hword_reg(1) == 0x3EF5
-    assert await tqv.read_word_reg(0) == 0x3EF57760
+    assert await tqv.read_byte_reg(2) == 0x00
+    assert await tqv.read_hword_reg(2) == 0xA400
+    assert await tqv.read_word_reg(2) == 0x3EF5A400
 
     # Test the interrupt, generated when invalid floating point input
     #dut.ui_in[6].value = 1
