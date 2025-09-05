@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Dylan Toussaint
+ * Copyright (c) 2025 Dylan Toussaint, Justin Fok
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -23,7 +23,8 @@ module fixed_to_fp(
   reg  [4:0]  count;  
   integer     msb;            
   integer     exp;            
-  reg  [31:0] norm;  
+  reg  [31:0] norm;
+  reg  [17:0] imm;
 
   always @* begin
 
@@ -66,11 +67,16 @@ module fixed_to_fp(
 
       msb = 17 - count;
       exp = (msb - 16) + 127;
+      
 
-      if (msb > 16)
-         norm = abs_val >> (msb - 16);
-      else
-         norm = abs_val << (16 - msb);
+      if (msb > 16) begin
+         imm = abs_val >> (msb - 16);
+         norm = {imm[16:0], 6'b0};
+      end
+      else begin
+         imm = abs_val << (16 - msb);
+         norm = {imm[16:0], 6'b0};
+      end
 
       fp_out = { sign, exp[7:0], norm[22:0] };
     end

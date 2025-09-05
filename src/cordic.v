@@ -24,9 +24,9 @@ module cordic (
     localparam [1:0] IDLE = 2'd0, BUSY = 2'd1, DONE = 2'd2;
     reg [1:0] state;
 
-    localparam signed [17:0] CORDIC_K = 18'h09B75; //TODO: unsure
-    localparam signed [17:0] PI       = 18'h3243F; //TODO: unsure
-    localparam signed [17:0] PI_2     = PI >>> 1;
+    localparam signed [17:0] CORDIC_K = 18'h09B75; 
+    localparam unsigned [17:0] PI       = 18'h3243F; 
+    localparam signed [17:0] PI_2     = PI >> 1;
 
     reg  signed [17:0] x_in, y_in, z_in;
     wire signed [17:0] x_out, y_out, z_out;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Dylan Toussaint
+ * Copyright (c) 2025 Dylan Toussaint, Justin Fok
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -22,6 +22,7 @@ module fp_to_fixed #(
     wire  [7:0]  exp;
     wire  [22:0] frac;
     wire  [23:0] mant;
+    reg  [23+Q-1:0] imm;
 
     //Need to handle special cases...
     wire is_zero = (exp == 8'd0)   && (frac == 23'd0);
@@ -36,11 +37,8 @@ module fp_to_fixed #(
     assign frac = fp_in[22:0];
     assign mant = is_sub ? {1'b0, frac} : {1'b1, frac};
 
-    reg [17:0] mant_ext;
-
     always @* begin
         fp_out   = 18'd0;
-        mant_ext = mant[17:0];
         shift    = 0;
 
         if(is_zero) begin
@@ -52,12 +50,14 @@ module fp_to_fixed #(
         end else begin
             fp_input_invalid_flag = 1'b0;
 
-            shift = is_sub ? (-126 - 7) : ((exp - 127) - 7);
+            shift = is_sub ? -126  : (exp - 127);
 
             if(shift >= 0) begin
-                fp_out = sign ? - (mant_ext << shift) : (mant_ext << shift);
+                imm = sign ? - (mant << shift) : (mant << shift);
+                fp_out = imm[23+Q-1:23+Q-1-18];
             end else begin
-                fp_out = sign ? - (mant_ext >>> (-shift)) : (mant_ext >>> (-shift));
+                imm = sign ? - (mant >>> (-shift)) : (mant >>> (-shift));
+                fp_out = imm[23+Q-1:23+Q-1-17];
             end
         end
     end
