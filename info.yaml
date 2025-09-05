@@ -4,7 +4,7 @@ project:
   author:       "Dylan Toussaint, Justin Fok"      # Your name
   discord:      "fabricelamalice, modnargnihtemos"      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
   description:  "CORDIC Accelerator for TinyQV"      # One line description of what your project does
-  language:     "SystemVerilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
+  language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     64000000  # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 167x108 uM.
@@ -68,3 +68,4 @@ pinout:
 
 # Do not change!
 yaml_version: 6
+
