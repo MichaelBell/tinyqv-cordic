@@ -40,13 +40,11 @@ Document the registers that are used to interact with your peripheral
 
 ## How to test
 
-Test on valid input: first load the input angle θ into the THETA register. Next use the CONTROl register to choose whether to output cos(θ) or sin(θ), the start signal can be set high in the same clock cycle. Use the STATUS register to determine when the calculation is complete, the result can then be extracted from the RESULT register. 
-![example of testing module calculation](docs/test_example.png "calculation test"
+Test on valid input: first load the input angle θ into the THETA register. Next use the CONTROl register to choose whether to output cos(θ) or sin(θ), the start signal can be set high in the same clock cycle. Use the STATUS register to determine when the calculation is complete, the result can then be extracted from the RESULT register.
+
+<img src="test_example.png" alt="calculation test" width="300"/>
 
 Test on invalid input: load an invalid input angle θ into the THETA register, the following example shows value nan, other possibilities include inf. tqv.is_interrupt_asserted() is used to check that the interrupt is correctly triggered. To clear the interrupt the least significant bit of address 0x08 is set high.
-![example of testing module interrupt](docs/test_interrupt.png "interrupt test"
 
-## External hardware
-
-N/A
+<img src="test_interrupt.png" alt="interrupt test" width="300"/>
 
