@@ -31,9 +31,6 @@ module cordic_instr_top(
 	wire        cordic_done;
 	reg         delay;
 
-	wire input_invalid_flag;
-	
-
 	fp_to_fixed fp_to_fixed_inst ( 
 		.fp_in(dataa),
 		.fp_out(fp_in),

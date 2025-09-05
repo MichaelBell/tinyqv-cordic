@@ -29,27 +29,81 @@ module cordicDylanJustin (
     output        user_interrupt  // Dedicated interrupt request for this peripheral
 );
 
-    //cordic accelerator at address 0
-    wire cos;
-    wire start;
-    wire done;
-    wire input_invalid_flag;
-    assign cos = ui_in[0];
-    assign start = (data_write_n != 2'b11) && (address == 6'h0);
-    assign data_ready = done;
+    // Register map
+    localparam [5:0] ADDR_THETA = 6'h00; // float32 input
+    localparam [5:0] ADDR_CONTROL = 6'h01; // bit0 start, bit1 cos
+    localparam [5:0] ADDR_RESULT = 6'h02; // float32 result
+    localparam [5:0] ADDR_STATUS = 6'h03; // bit0 done (read-to-clear)
+    
+    // Registers
+    reg  [31:0] theta_reg;
+    reg  [1:0]  control_reg;        // bit 1:cos, bit 0:start
+    reg  [31:0] result_reg;
+    reg         status_reg;       // done
 
+    // Cordic wires
+    wire        cordic_done;
+    wire [31:0] cordic_result;
+    wire input_invalid_flag;
+    
+    // Drive CORDIC top
     cordic_instr_top cit(
-        .dataa(data_in),
+        .dataa(theta_reg),
         .datab(32'b0),
         .clk(clk),
         .clk_en(1'b1),
         .reset(!rst_n),
-        .start(start),
-        .cos(cos),
-        .done(done),
-        .result(data_out),
+        .start(control_reg[0]),
+        .cos(control_reg[1]),
+        .done(cordic_done),
+        .result(cordic_result),
         .input_invalid_flag(input_invalid_flag)
-    );	
+    );
+    
+    reg	prev_start;
+  
+    // Register writes
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            theta_reg  <= 32'b0;
+            control_reg    <= 2'b10;   // default cos
+            result_reg <= 32'b0;
+            status_reg   <= 1'b0;  // clear done status
+        end else begin
+            if (address == ADDR_THETA) begin
+                if (data_write_n != 2'b11)              theta_reg[7:0]   <= data_in[7:0];
+                if (data_write_n[1] != data_write_n[0]) theta_reg[15:8]  <= data_in[15:8];
+                if (data_write_n == 2'b10)              theta_reg[31:16] <= data_in[31:16];
+            end
+            if (address == ADDR_CONTROL)  begin
+                if (data_write_n != 2'b11) begin
+        	    control_reg[1:0]	<= data_in[1:0];
+                    if (data_in[0])	status_reg <= 1'b0; // clear done status on new start
+                end
+            end
+            if (cordic_done) begin
+                result_reg <= cordic_result;
+                status_reg <= 1'b1; //done
+                control_reg[0] <= 1'b0; //clear start on done
+            end
+        end
+        
+        prev_start <= control_reg[0];
+    end
+    
+    wire [31:0] data_out_imm;
+    
+    // Register reads, unused addresses read 0
+    assign data_out_imm = (address == ADDR_THETA) ? theta_reg :
+                      (address == ADDR_CONTROL) ? {30'b0, control_reg} :
+                      (address == ADDR_RESULT) ? result_reg :
+                      (address == ADDR_STATUS) ? {31'b0, status_reg} : 
+                      32'b0;
+    assign data_out = (data_read_n == 2'b00) ? {24'b0, data_out_imm[7:0]} :
+    		      (data_read_n == 2'b01) ? {16'b0, data_out_imm[15:0]} :
+    		      (data_read_n == 2'b00) ? data_out_imm : 
+    		      32'b0;
+    assign data_ready = status_reg;
     
     // User interrupt is generated on rising edge of invalid floating point input, and cleared by writing a 1 to the low bit of address 8.
     
