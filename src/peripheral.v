@@ -33,7 +33,7 @@ module cordicDylanJustin (
     localparam [5:0] ADDR_THETA = 6'h00; // float32 input
     localparam [5:0] ADDR_CONTROL = 6'h01; // bit0 start, bit1 cos
     localparam [5:0] ADDR_RESULT = 6'h02; // float32 result
-    localparam [5:0] ADDR_STATUS = 6'h03; // bit0 done (read-to-clear)
+    localparam [5:0] ADDR_STATUS = 6'h03; // bit0 done
     
     // Registers
     reg  [31:0] theta_reg;
@@ -135,4 +135,5 @@ module cordicDylanJustin (
     wire _unused = &{data_read_n, 1'b0};
     assign uo_out         = 8'd0;
 endmodule
+
 
