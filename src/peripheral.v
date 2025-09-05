@@ -33,6 +33,7 @@ module cordicDylanJustin (
     wire cos;
     wire start;
     wire done;
+    wire input_invalid_flag;
     assign cos = ui_in[0];
     assign start = (data_write_n != 2'b11) && (address == 6'h0);
     assign data_ready = done;
@@ -46,37 +47,35 @@ module cordicDylanJustin (
         .start(start),
         .cos(cos),
         .done(done),
-        .result(data_out)
+        .result(data_out),
+        .input_invalid_flag(input_invalid_flag)
     );	
     
-    // User interrupt is generated on rising edge of ui_in[6], and cleared by writing a 1 to the low bit of address 8.
-    /*
-    reg example_interrupt;
-    reg last_ui_in_6;
+    // User interrupt is generated on rising edge of invalid floating point input, and cleared by writing a 1 to the low bit of address 8.
+    
+    reg interrupt;
+    reg prev_interrupt;
 
     always @(posedge clk) begin
         if (!rst_n) begin
-            example_interrupt <= 0;
+            interrupt <= 0;
         end
 
-        if (ui_in[6] && !last_ui_in_6) begin
-            example_interrupt <= 1;
+        if (input_invalid_flag && !prev_interrupt) begin
+            interrupt <= 1;
         end else if (address == 6'h8 && data_write_n != 2'b11 && data_in[0]) begin
-            example_interrupt <= 0;
+            interrupt <= 0;
         end
 
-        last_ui_in_6 <= ui_in[6];
+        prev_interrupt <= input_invalid_flag;
     end
 
-    assign user_interrupt = example_interrupt;
-    */
+    assign user_interrupt = interrupt;
 
     // List all unused inputs to prevent warnings
     // data_read_n is unused as none of our behaviour depends on whether
     // registers are being read.
     wire _unused = &{data_read_n, 1'b0};
     assign uo_out         = 8'd0;
-    assign user_interrupt = 1'b0;
-
 endmodule
 

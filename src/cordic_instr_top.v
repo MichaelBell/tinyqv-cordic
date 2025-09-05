@@ -16,9 +16,10 @@ module cordic_instr_top(
 	input  wire        clk_en,
 	input  wire        reset,
 	input  wire        start,
-	input  wire	       cos,
+	input  wire	   cos,
 	output reg         done,
-	output reg  [31:0] result
+	output reg  [31:0] result,
+	output reg         input_invalid_flag
 );	
 	
 	wire [17:0] fp_in;
