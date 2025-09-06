@@ -6,7 +6,7 @@
 `default_nettype none
 
 /** TinyQV peripheral test using SPI */
-module tt_um_periph_cordic_tqv_peripheral_harness (
+module tt_um_tqv_peripheral_harness (
     input  wire [7:0] ui_in,    // Dedicated inputs
     output wire [7:0] uo_out,   // Dedicated outputs
     input  wire [7:0] uio_in,   // IOs: Input path
@@ -129,4 +129,5 @@ module tt_um_periph_cordic_tqv_peripheral_harness (
   wire _unused = &{ena, uio_in[7], uio_in[3:0], 1'b0};
 
 endmodule
+
 
