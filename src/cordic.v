@@ -20,7 +20,8 @@ module cordic (
 
     localparam [3:0] STAGES       = 12;
 
-    reg busy;
+    localparam [1:0] IDLE = 2'd0, BUSY = 2'd1, DONE = 2'd2;
+    reg [1:0] state;
 
     localparam signed   [18:0] CORDIC_K = 19'h09B75; 
     localparam unsigned [18:0] PI       = 19'h3243F; 
@@ -34,7 +35,6 @@ module cordic (
 
     reg  signed [18:0] theta_red;
     reg                flip;
-    reg  signed [18:0] sel;
 
     reg cos_state;
 
@@ -71,40 +71,48 @@ module cordic (
 
     //Reset and Start Signals
     //Stage Counter for final operation
-    wire signed [18:0] sel_val   = (cos_state ? x_out : y_out);
-    wire signed [18:0] final_val = flip ? -sel_val : sel_val;
-    
     always @(posedge clk) begin
         if (rst) begin
-            busy  <= 1'b0;
+            //Reset signal, set state to IDLE and signals to 0
+            x_in  <= 19'sd0;
+            y_in  <= 19'sd0;
+            z_in  <= 19'sd0;
             count <= 4'd0;
             done  <= 1'b0;
+            state <= IDLE;
         end else if (clk_en) begin
-            done <= 1'b0;
-
-            if (!busy) begin
-            if (start) begin
-                busy      <= 1'b1;
-                count     <= 4'd0;
-                cos_state <= cos;
-                x_in      <= CORDIC_K;
-                y_in      <= 19'sd0;
-                z_in      <= theta_red;
-            end
-            end else begin
-                // BUSY
-                x_in  <= x_out;
-                y_in  <= y_out;
-                z_in  <= z_out;
-
-                if (count == (STAGES-1)) begin
-                    busy  <= 1'b0;
-                    done  <= 1'b1;
-                    cos_o <= final_val;
-                end else begin
-                    count <= count + 4'd1;
+            case (state)
+                IDLE: begin
+                    done <= 1'b0;
+                    if (start) begin
+                        cos_state <= cos;
+                        x_in  <= CORDIC_K;
+                        y_in  <= 19'sd0;
+                        z_in  <= theta_red;
+                        count <= 4'd0;
+                        state <= BUSY;
+                    end
                 end
-            end
+                BUSY: begin
+                    x_in <= x_out;
+                    y_in <= y_out;
+                    z_in <= z_out;
+                    if (count == (STAGES-1)) begin
+                        state <= DONE;
+                        done  <= 1'b1;
+                        cos_o <= flip ? (cos_state ? -x_out : -y_out) : (cos_state ? x_out : y_out);
+                    end else begin
+                        count <= count + 4'd1;
+                    end
+                end
+                DONE: begin
+                    done  <= 1'b0;
+                    state <= IDLE;
+                end
+                default: begin
+                    state <= IDLE;
+                end
+            endcase
         end
     end
 

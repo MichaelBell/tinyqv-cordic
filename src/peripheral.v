@@ -6,7 +6,7 @@
 `default_nettype none
 
 // Cordic - trigonometry accelerator
-module periph_cordic (
+module tqvp_baby_cordic (
     input         clk,          // Clock - the TinyQV project clock is normally set to 64MHz.
     input         rst_n,        // Reset_n - low to reset.
 
@@ -128,5 +128,4 @@ module periph_cordic (
     assign uo_out = 8'b0;
     wire _unused = &{ui_in, 1'b0};
 endmodule
-
 
