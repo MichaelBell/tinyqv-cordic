@@ -6,120 +6,76 @@ from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
 from tqv import TinyQV
-from testbench import scoreboard
+import math
+import struct
+import random
 
 # When submitting your design, change this to the peripheral number
 # in peripherals.v.  e.g. if your design is i_user_peri05, set this to 5.
 # The peripheral number is not used by the test harness.
 PERIPHERAL_NUM = 0
 
+def float_to_spi_word(x: float) -> int:
+    if math.isnan(x):
+        return 0x7FC00000
+    if math.isinf(x):
+        return 0x7F800000 if x > 0 else 0xFF800000
+    return struct.unpack(">I", struct.pack(">f", x))[0]
+
+def spi_word_to_float(u: int) -> float:
+    return struct.unpack(">f", struct.pack(">I", u & 0xFFFFFFFF))[0]
+
 @cocotb.test()
 async def test_project(dut):
     dut._log.info("Start")
 
-    # Set the clock period to 100 ns (10 MHz)
-    clock = Clock(dut.clk, 100, units="ns")
+    clock = Clock(dut.clk, 10, units="ns")  # 100 MHz
     cocotb.start_soon(clock.start())
 
-    # Interact with your design's registers through this TinyQV class.
-    # This will allow the same test to be run when your design is integrated
-    # with TinyQV - the implementation of this class will be replaces with a
-    # different version that uses Risc-V instructions instead of the SPI test
-    # harness interface to read and write the registers.
     tqv = TinyQV(dut, PERIPHERAL_NUM)
+
+    rng = random.Random(12345)
+
+    valid_angles = [rng.uniform(-math.pi, math.pi) for i in range(100)]
 
     # Reset
     await tqv.reset()
-
-    dut._log.info("Test project behavior")
-    
-    # Set an input value
-    #dut.ui_in.value = 1
-
-    # Wait for two clock cycles to see the output values, because ui_in is synchronized over two clocks,
-    # and a further clock is required for the output to propagate.
     await ClockCycles(dut.clk, 3)
 
-    # Test register write and read back
-    await tqv.write_word_reg(0, 0x3F000000) #0.5
-    assert await tqv.read_byte_reg(0) == 0x00
-    assert await tqv.read_hword_reg(0) == 0x0000
-    assert await tqv.read_word_reg(0) == 0x3F000000
-    await tqv.write_word_reg(1, 0x00000003) #cos
-    await ClockCycles(dut.clk, 6)
-    assert await tqv.read_byte_reg(3) == 0x01 #done
-    assert await tqv.read_byte_reg(2) == 0x00
-    assert await tqv.read_hword_reg(2) == 0x9E00
-    assert await tqv.read_word_reg(2) == 0x3F609E00
+    # We shouldn't block on a read before a write...
+    r0 = await tqv.read_word_reg(0x02)
+    assert r0 == 0x00000000, f"Empty read should return 0x0: actual {r0:08X}"
 
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    #assert dut.uo_out.value == 0x96
+    dut._log.info("Started testing valid angles.")
+    for idx, a in enumerate(valid_angles):
+        # --- VALID SIN INPUTS ---
+        await tqv.write_byte_reg(0x01, 0x01)            # CTRL: 1=cos
+        await tqv.write_word_reg(0x00, float_to_spi_word(a))      
+        spi_out = await tqv.read_word_reg(0x02) 
+        cos_res = spi_word_to_float(spi_out)    
+        assert abs(cos_res - math.cos(a)) < 2e-3, f"cos mismatch -  \n angle: {a:.4f} \n expected: {math.cos(a):.4f} \n actual: {cos_res: .4f} "  
 
-    # A second write should work
-    #dut.ui_in.value = 0
-    await tqv.write_word_reg(0, 0x3F000000) #0.5
-    await tqv.write_word_reg(1, 0x00000001) #sin
-    await ClockCycles(dut.clk, 6)
-    assert await tqv.read_byte_reg(3) == 0x01 #done
-    assert await tqv.read_byte_reg(2) == 0x00
-    assert await tqv.read_hword_reg(2) == 0xA400
-    assert await tqv.read_word_reg(2) == 0x3EF5A400
+        # --- VALID COS INPUTS ---
+        await tqv.write_byte_reg(0x01, 0x00)            # CTRL: 0=sin
+        await tqv.write_word_reg(0x00, float_to_spi_word(a))      
+        spi_out = await tqv.read_word_reg(0x02) 
+        sin_res = spi_word_to_float(spi_out)        
+        assert abs(sin_res - math.sin(a)) < 2e-3, f"sin mismatch - \n angle: {a:.4f} \n expected: {math.sin(a):.4f} \n actual: {sin_res: .4f} " 
 
-    # Test the interrupt, generated when invalid floating point input
-    #dut.ui_in[6].value = 1
-    #await ClockCycles(dut.clk, 1)
-    #dut.ui_in[6].value = 0
-    
-    await tqv.write_word_reg(0, 0xFFFFFFFF) #nan
-    assert await tqv.read_word_reg(0) == 0xFFFFFFFF
+    # --- INVALID INPUTS ---
+    invalid_angles = [math.nan, math.inf, -math.inf] + [(math.pi*1.01)*(1 if rng.random()<0.5 else -1)*rng.uniform(1,10) for _ in range(100)]
 
-    # Interrupt asserted
-    await ClockCycles(dut.clk, 3)
-    assert await tqv.is_interrupt_asserted()
+    dut._log.info("Started testing invalid angles.")
+    for idx, a in enumerate(invalid_angles):
+        # --- VALID SIN INPUTS ---
+        await tqv.write_byte_reg(0x01, 0x01)            # CTRL: 1=cos
+        await tqv.write_word_reg(0x00, float_to_spi_word(a))      
+        spi_out = await tqv.read_word_reg(0x02)  
+        assert spi_out == 0x7FC00000, f"Invalid angle mismatch (cos): \n input: {a:.4f} \n {spi_word_to_float(spi_out):.4f}"
 
-    # Interrupt doesn't clear
-    await ClockCycles(dut.clk, 10)
-    assert await tqv.is_interrupt_asserted()
-    
-    # Write bottom bit of address 8 high to clear
-    await tqv.write_byte_reg(8, 1)
-    assert not await tqv.is_interrupt_asserted()
-
-@cocotb.test
-async def test_with_scoreboard(dut):
-    """
-    Test the design with scoreboard
-    """
-    sb = scoreboard.Scoreboard(
-        name="regbus_sb",
-        timeout=1000,            # optional
-        time_units="us",
-        # comparator=lambda dut_txn, model_txn: dut_txn == model_txn,  # default anyway
-    )
-    sb.start()
-
-    # Example transaction shape (anything hashable/serializable is fine)
-    # e.g., tuples: (addr, kind, width, data)
-    # Feed expected transactions from your golden model:
-    await sb.model_q.put( (0x00, "W", 32, 0x3F000000) )
-    await ClockCycles(dut.clk, 12)
-    await sb.model_q.put( (0x00, "R",  8, 0x00) )
-    await sb.model_q.put( (0x00, "R", 16, 0x9E00) )
-    await sb.model_q.put( (0x00, "R", 32, 0x3F609E00) )
-
-    # Meanwhile, your DUT monitor pushes observed transactions:
-    # (You would implement a coroutine that watches your bus or TinyQV wrapper
-    #  and pushes into sb.dut_q as things happen.)
-    await sb.dut_q.put( (0x00, "W", 32, 0x3F000000) )
-    await ClockCycles(dut.clk, 12)
-    await sb.dut_q.put( (0x00, "R",  8, 0x00) )
-    await sb.dut_q.put( (0x00, "R", 16, 0x9E00) )
-    await sb.dut_q.put( (0x00, "R", 32, 0x3F609E00) )
-
-    # Signal completion (both sides)
-    await sb.model_done()
-    await sb.dut_done()
-
-    # Wait for scoreboard to finish (asserts if mismatch/length mismatch)
-    await sb.wait()
+        # --- VALID COS INPUTS ---
+        await tqv.write_byte_reg(0x01, 0x00)            # CTRL: 0=sin
+        await tqv.write_word_reg(0x00, float_to_spi_word(a))      
+        spi_out = await tqv.read_word_reg(0x02) 
+        spi_out = await tqv.read_word_reg(0x02)  
+        assert spi_out == 0x7FC00000, f"Invalid angle mismatch (sin): \n input: {a:.4f} \n {spi_word_to_float(spi_out):.4f}"

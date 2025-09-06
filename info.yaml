@@ -19,7 +19,6 @@ project:
   source_files:
     - "atan.v"
     - "cordic.v"
-    - "cordic_chain.v"
     - "cordic_instr_top.v"
     - "cordic_stage.v"
     - "fixed_to_fp.v"

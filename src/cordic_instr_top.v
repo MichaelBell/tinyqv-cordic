@@ -11,30 +11,27 @@
  */
 module cordic_instr_top(
 	input  wire [31:0] dataa,
-	input  wire [31:0] datab,
 	input  wire        clk,
 	input  wire        clk_en,
 	input  wire        reset,
 	input  wire        start,
-	input  wire	   cos,
+	input  wire	       cos,
 	output reg         done,
 	output reg  [31:0] result,
 	output reg         input_invalid_flag
 );	
 	
-	wire [17:0] fp_in;
-	wire [17:0] fp_out;
+	wire [18:0] fp_in;
+	wire [18:0] fp_out;
 	wire [31:0] temp_out;
 	
-	wire [17:0] cordic_in;
-	wire [17:0] cordic_out;
 	wire        cordic_done;
 	reg         delay;
 
 	fp_to_fixed fp_to_fixed_inst ( 
-		.fp_in(dataa),
-		.fp_out(fp_in),
-		.fp_input_invalid_flag(input_invalid_flag)
+		.fp_in                (dataa),              //Input floating point
+		.fp_out               (fp_in),              //Output fixed point
+		.fp_input_invalid_flag(input_invalid_flag)  //Flag for invalid input.
 	);
 
 	cordic cordic_inst (

@@ -6,7 +6,7 @@
 `default_nettype none
 
 // Cordic - trigonometry accelerator
-module cordicDylanJustin (
+module periph_cordic (
     input         clk,          // Clock - the TinyQV project clock is normally set to 64MHz.
     input         rst_n,        // Reset_n - low to reset.
 
@@ -30,109 +30,102 @@ module cordicDylanJustin (
 );
 
     // Register map
-    localparam [5:0] ADDR_THETA = 6'h00; // float32 input
-    localparam [5:0] ADDR_CONTROL = 6'h01; // bit0 start, bit1 cos
-    localparam [5:0] ADDR_RESULT = 6'h02; // float32 result
-    localparam [5:0] ADDR_STATUS = 6'h03; // bit0 done (read-to-clear)
-    
-    // Registers
-    reg  [31:0] theta_reg;
-    reg  [1:0]  control_reg;        // bit 1:cos, bit 0:start
-    reg  [31:0] result_reg;
-    reg         status_reg;       // done
+    localparam [5:0] ADDR_THETA    = 6'h00; // float32 input
+    localparam [5:0] ADDR_CONTROL  = 6'h01; // bit to switch the mode 1 = COS, 0 = SIN
+    localparam [5:0] ADDR_RESULT   = 6'h02; // float32 result
 
-    // Cordic wires
+    localparam [31:0] NAN = 32'h7FC0_0000;
+    
+    // Interface
+    reg  [31:0] theta_reg;     //Input buffer
+    reg         control_reg;   //Flag for cosine or sine mode -> 0 = COSINE, 1 = SINE
+    reg         busy_reg;      //Indicates busy
+    reg         start_reg;     //Signal to start
+    reg         start_pending; //New Input, waiting to start
+    reg  [31:0] result_reg;    //Output buffer
+    reg         result_valid;  //Output valid flag
+
     wire        cordic_done;
     wire [31:0] cordic_result;
-    wire input_invalid_flag;
+    wire        input_invalid_flag;
+
+    // Useful wires for requests
+    wire write_theta      = (data_write_n == 2'b10 && address == ADDR_THETA);
+    wire write_control    = (data_write_n == 2'b00 && address == ADDR_CONTROL);
+    wire read_result      = (data_read_n  == 2'b10 && address == ADDR_RESULT);
     
-    // Drive CORDIC top
+    // Cordic_instr_top
+    // Assert start with a valid input on dataa to launch a cordic operation
+    // output is valid when done is asserted.
     cordic_instr_top cit(
-        .dataa(theta_reg),
-        .datab(32'b0),
-        .clk(clk),
-        .clk_en(1'b1),
-        .reset(!rst_n),
-        .start(control_reg[0]),
-        .cos(control_reg[1]),
-        .done(cordic_done),
-        .result(cordic_result),
+        .dataa             (theta_reg),
+        .clk               (clk),
+        .clk_en            (1'b1),
+        .reset             (!rst_n),
+        .start             (start_reg),
+        .cos               (control_reg),
+        .done              (cordic_done),
+        .result            (cordic_result),
         .input_invalid_flag(input_invalid_flag)
     );
-    
-    reg	prev_start;
-  
-    // Register writes
+
+    // Handle requests
     always @(posedge clk) begin
-        if (!rst_n) begin
-            theta_reg  <= 32'b0;
-            control_reg    <= 2'b10;   // default cos
-            result_reg <= 32'b0;
-            status_reg   <= 1'b0;  // clear done status
+        if(!rst_n) begin
+            theta_reg     <= 32'd0;
+            control_reg   <= 1'b0;
+            result_reg    <= 32'd0;
+            result_valid  <= 1'b0;
+            busy_reg      <= 1'b0;
+            start_pending <= 1'b0;
+            start_reg     <= 1'b0;
         end else begin
-            if (address == ADDR_THETA) begin
-                if (data_write_n != 2'b11)              theta_reg[7:0]   <= data_in[7:0];
-                if (data_write_n[1] != data_write_n[0]) theta_reg[15:8]  <= data_in[15:8];
-                if (data_write_n == 2'b10)              theta_reg[31:16] <= data_in[31:16];
+            
+            if(start_reg) begin
+                start_reg <= 1'b0;
             end
-            if (address == ADDR_CONTROL)  begin
-                if (data_write_n != 2'b11) begin
-        	    control_reg[1:0]	<= data_in[1:0];
-                    if (data_in[0])	status_reg <= 1'b0; // clear done status on new start
+
+            //Always accept writes to the control register
+            if(write_control) begin
+                control_reg <= data_in[0];
+            end
+
+            //Writes to theta are gated by the busy flag
+            if(write_theta && !busy_reg) begin
+                theta_reg     <= data_in;
+                start_pending <= 1'b1;
+                result_valid  <= 1'b0;
+            end
+
+            //Handle bad inputs by returning NAN
+            if(start_pending) begin
+                start_pending <= 1'b0;
+                if(input_invalid_flag) begin
+                    result_reg   <= NAN;
+                    result_valid <= 1'b1;
+                end else begin
+                    start_reg <= 1'b1;
+                    busy_reg  <= 1'b1;
                 end
             end
-            if (cordic_done) begin
-                result_reg <= cordic_result;
-                status_reg <= 1'b1; //done
-                control_reg[0] <= 1'b0; //clear start on done
+
+            //Capture cordic result
+            if(cordic_done) begin
+                result_reg   <= cordic_result;
+                result_valid <= 1'b1;
+                busy_reg     <= 1'b0;
             end
         end
-        
-        prev_start <= control_reg[0];
-    end
-    
-    wire [31:0] data_out_imm;
-    
-    // Register reads, unused addresses read 0
-    assign data_out_imm = (address == ADDR_THETA) ? theta_reg :
-                      (address == ADDR_CONTROL) ? {30'b0, control_reg} :
-                      (address == ADDR_RESULT) ? result_reg :
-                      (address == ADDR_STATUS) ? {31'b0, status_reg} : 
-                      32'b0;
-    /*
-    assign data_out = (data_read_n == 2'b00) ? {24'b0, data_out_imm[7:0]} :
-    		      (data_read_n == 2'b01) ? {16'b0, data_out_imm[15:0]} :
-    		      (data_read_n == 2'b00) ? data_out_imm : 
-    		      32'b0;
-    */
-    assign data_out = data_out_imm;
-    assign data_ready = (address == ADDR_RESULT) ? status_reg : 1'b1;
-    
-    // User interrupt is generated on rising edge of invalid floating point input, and cleared by writing a 1 to the low bit of address 8.
-    
-    reg interrupt;
-    reg prev_interrupt;
-
-    always @(posedge clk) begin
-        if (!rst_n) begin
-            interrupt <= 0;
-        end
-
-        if (input_invalid_flag && !prev_interrupt) begin
-            interrupt <= 1;
-        end else if (address == 6'h8 && data_write_n != 2'b11 && data_in[0]) begin
-            interrupt <= 0;
-        end
-
-        prev_interrupt <= input_invalid_flag;
     end
 
-    assign user_interrupt = interrupt;
-
+    assign data_out   = read_result ? result_reg : 32'd0;
+    assign data_ready = read_result && (result_valid || (!busy_reg && !start_pending));
+    
     // List all unused inputs to prevent warnings
     // data_read_n is unused as none of our behaviour depends on whether
     // registers are being read.
-    wire _unused = &{data_read_n, 1'b0};
-    assign uo_out         = 8'd0;
+    assign user_interrupt = 1'b0;
+    assign uo_out = 8'b0;
+    wire _unused = &{ui_in, 1'b0};
 endmodule
 
